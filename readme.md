@@ -168,9 +168,9 @@ With root access, we can:
 ⚠️ This was performed on my own device for educational purposes only.
 
 
-# 🧰 PlatformIO Project Setup
+# PlatformIO Project Setup
 
-## 📥 Clone the Repository
+## Clone the Repository
 
 ```bash
 git clone https://github.com/rudra-patell/tp-link_UART-reverse-shell.git
@@ -179,7 +179,7 @@ cd tp-link_UART-reverse-shell
 
 ---
 
-## ⚙️ Open Project in PlatformIO
+##  Open Project in PlatformIO
 
 ### Option 1: VS Code (Recommended)
 
@@ -209,7 +209,7 @@ pio project init
 
 ---
 
-## 🔧 Install Dependencies
+## 🔧Install Dependencies
 
 PlatformIO will automatically install required frameworks and libraries when you build the project.
 
@@ -221,7 +221,7 @@ pio run
 
 ---
 
-## ▶️ Upload to ESP32
+##  Upload to ESP32
 
 Connect your ESP32 and run:
 
