@@ -37,13 +37,13 @@ I used an ESP32 to access the UART serial shell. You can also use a UART-to-seri
 
 ##  UART Pins on PCB
 
-![UART Pins](images/uart_pins.jpeg)
+<img src="images/uart_pins.jpeg" width="500">
 
 We are lucky to have the pins labeled as shown above. Now we just need to solder header pins.
 
 ##  ESP32 Wiring
 
-![ESP32 Wiring](images/esp32_wiring.png)
+<img src="images/esp32_wiring.png" width="500">
 
 MODEL - ESP32 (WROOM32) DevKit V1
 
@@ -68,7 +68,7 @@ You should see U-Boot logs similar to the image below.
 
 ##  Serial Output
 
-![Serial Output](images/serial_output.png)
+<img src="images/serial_output.png" width="500">
 
 If you see random ASCII characters, it means the baud rate is incorrect.
 
@@ -104,14 +104,14 @@ This will create an `/extraction` folder containing the firmware.
 
 ## Binwalk Output
 
-![Binwalk](images/binwalk_output.png)
+<img src="images/binwalk_output.png" width="500">
 
 In the extracted files, navigate to `/etc`.
 You will find files like `passwd.bak` or `shadow` containing usernames and hashed passwords, as shown below.
 
 ## Extraction Process
 
-![Extraction](images/password_hash.png)
+<img src="images/password_hash.png" width="500">
 
 ---
 
@@ -150,7 +150,7 @@ Using the recovered credentials, log in via UART:
 
 ## Root Shell
 
-![Root Shell](images/root_access.png)
+<img src="images/root_access.png" width="470" height="250">
 
 We now have access to the root shell.
 
