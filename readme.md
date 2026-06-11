@@ -1,47 +1,49 @@
-# 🛠️ Reverse Engineering the TP-Link TL-WR850N
+# TP-Link TL-WR850N — UART Debug Interface & Firmware Analysis
 
-### From UART Access → Firmware Exploitation → Root Shell
+### From Physical Access → Firmware Extraction → Root Shell
 
 ![Status](https://img.shields.io/badge/Status-Completed-success)
-![Platform](https://img.shields.io/badge/Environment-Arch--Linux%20\(WSL\)-blue)
-![Tools](https://img.shields.io/badge/Tools-Binwalk%20|%20JohnTheRipper%20|%20ESP32-red)
+![Platform](https://img.shields.io/badge/Environment-Arch--Linux%20(WSL)-blue)
+![Tools](https://img.shields.io/badge/Tools-Binwalk%20%7C%20JohnTheRipper%20%7C%20ESP32-red)
 
 ---
 
-## 📌 Project Overview
+## Overview
 
-This project demonstrates a complete hardware-to-software exploitation workflow on a **TP-Link TL-WR850N (TH&IN)v3 router**, showing how physical access can lead to **full root shell compromise**.
+A complete hardware-to-software security analysis of a TP-Link TL-WR850N (TH&IN) v3 router, demonstrating how an exposed UART debug interface can lead to full root shell access without any network-based exploitation.
 
-It combines:
+Covers: hardware reconnaissance, baud rate detection, firmware extraction, filesystem analysis, and credential recovery.
 
-* Hardware debugging
-* Firmware reverse engineering
-* Toolchain patching
-* Password cracking
+> ⚠️ Performed on my own device for security research and educational purposes only.
 
 ---
 
-## 🎯 Objectives
+## Methodology
 
-* Identify UART debug interface
-* Automate baud rate detection using ESP32
-* Extract vendor-modified SquashFS firmware
-* Patch legacy tools for modern GCC
-* Recover credentials from password hashes
+```
+Physical Access
+    └─► Identify UART pins on PCB
+          └─► Connect ESP32, detect baud rate
+                └─► Access serial console (TTY)
+                      ├─► Direct root shell (if unprotected)
+                      └─► Password protected
+                            └─► Download firmware binary
+                                  └─► binwalk extraction → SquashFS
+                                        └─► Extract password hash → John the Ripper
+                                              └─► Authenticate → Root Shell
+```
 
 ---
 
 # Phase 1: Hardware Recon & UART
 
-I used an ESP32 to access the UART serial shell. You can also use a UART-to-serial (TTL) bridge.
-
-##  UART Pins on PCB
+## UART Pins on PCB
 
 <img src="images/uart_pins.jpeg" width="500">
 
-We are lucky to have the pins labeled as shown above. Now we just need to solder header pins.
+The TL-WR850N has UART pins labeled directly on the PCB — TX, RX, VCC, GND. Soldered standard header pins for connection.
 
-##  ESP32 Wiring
+## ESP32 Wiring
 
 <img src="images/esp32_wiring.png" width="500">
 
@@ -55,59 +57,31 @@ MODEL - ESP32 (WROOM32) DevKit V1
 
 ## Baud Rate Detection
 
-You can try the default baud rate **115200 bps** for most TP-Link routers.
-Alternatively, you can find it using trial with standard baud rates.
+Default baud rate for most TP-Link routers: **115200 bps**.
 
-Flash the ESP32 with the provided code, then:
+Flash the ESP32 with the provided baud rate scanner (`src/`), connect, power on the router, and observe U-Boot logs in the serial monitor. Garbled ASCII output means wrong baud rate.
 
-1. Connect ESP32
-2. Open serial monitor
-3. Power on the router
-
-You should see U-Boot logs similar to the image below.
-
-##  Serial Output
+## Serial Output
 
 <img src="images/serial_output.png" width="500">
-
-If you see random ASCII characters, it means the baud rate is incorrect.
 
 ---
 
 # Phase 2: Firmware Extraction
 
-In some cases, you may directly get a root shell via UART.
-However, most devices are password protected.
+The device was password protected — default credentials (`admin:admin`, `root:admin`) did not work. Downloaded the firmware binary from TP-Link's official site and extracted using binwalk.
 
-Common default credentials:
-
-```
-admin:admin  
-root:admin  
-```
-
-If these do not work, we need to reverse engineer the firmware to extract password hashes and crack them using John the Ripper or Hashcat.
-
-We will use **binwalk** to extract the firmware.
-
-Run this command in your Linux shell:
-
-```zsh
+```bash
 binwalk -e firmware.bin
 ```
 
-Make sure `binwalk` and `squashfs` are installed before running this command.
-
-This will create an `/extraction` folder containing the firmware.
-
----
+Make sure `binwalk` and `squashfs` are installed before running this command. This will create an `/extraction` folder containing the filesystem.
 
 ## Binwalk Output
 
 <img src="images/binwalk_output.png" width="500">
 
-In the extracted files, navigate to `/etc`.
-You will find files like `passwd.bak` or `shadow` containing usernames and hashed passwords, as shown below.
+Navigate to `/etc` in the extracted filesystem. You will find `passwd.bak` or `shadow` containing usernames and hashed passwords.
 
 ## Extraction Process
 
@@ -115,138 +89,92 @@ You will find files like `passwd.bak` or `shadow` containing usernames and hashe
 
 ---
 
+# Phase 3: Credential Recovery
 
-# 🔐 Phase 3: Cracking the Password Hash
-
-From the image, the hash is:
+The extracted hash format is MD5-crypt (`$1$`):
 
 ```
 $1$$iC.dUsGpxNNJGeOm1dFio/
 ```
 
-This is an **MD5-crypt ($1$)** hash.
+Cracked using John the Ripper with its built-in wordlist:
 
-We will use **John the Ripper** to crack it.
-
-Copy the hash into `hash.txt` and run:
-
-```zsh
+```bash
 john --format=md5crypt hash.txt
 ```
 
-This performs a dictionary-based brute-force attack using built-in wordlists.
-
 ## Cracking Result
 
-![Bruteforce](images/john.png)
-
-As shown, we successfully recovered the password.
+![John Output](images/john.png)
 
 ---
 
 # Root Access
 
-Using the recovered credentials, log in via UART:
+Authenticated via the UART serial console using the recovered credentials:
 
 ## Root Shell
 
 <img src="images/root_access.png" width="470" height="250">
 
-We now have access to the root shell.
+Full root access achieved — no network exploitation, no CVE, no software vulnerability. Physical access to the device was sufficient.
 
 ---
 
-With root access, we can:
-
-* Analyze how the router works
-* Modify system behavior
-* Add services
-* Install backdoors for pentesting purposes
-
----
-
-⚠️ This was performed on my own device for educational purposes only.
-
-
-# PlatformIO Project Setup
+# ESP32 Baud Rate Scanner — Setup
 
 ## Clone the Repository
 
 ```bash
-git clone https://github.com/rudra-patell/tp-link_UART-reverse-shell.git
-cd tp-link_UART-reverse-shell
+git clone https://github.com/rudra-patell/tp-link_UART-root-shell.git
+cd tp-link_UART-root-shell
 ```
 
----
-
-##  Open Project in PlatformIO
+## Open in PlatformIO
 
 ### Option 1: VS Code (Recommended)
 
 1. Install **VS Code**
 2. Install **PlatformIO IDE extension**
-3. Open VS Code
-4. Click **File → Open Folder**
-5. Select the project folder
+3. Click **File → Open Folder** → select the project folder
 
-PlatformIO will automatically detect the project using `platformio.ini`.
+PlatformIO will automatically detect the project via `platformio.ini`.
 
----
-
-### Option 2: PlatformIO CLI
-
-Make sure PlatformIO Core is installed:
+### Option 2: CLI
 
 ```bash
 pip install platformio
-```
-
-Then run:
-
-```bash
-pio project init
-```
-
----
-
-## 🔧Install Dependencies
-
-PlatformIO will automatically install required frameworks and libraries when you build the project.
-
-To manually trigger:
-
-```bash
-pio run
-```
-
----
-
-##  Upload to ESP32
-
-Connect your ESP32 and run:
-
-```bash
 pio run --target upload
-```
-
----
-
-## 🔍 Open Serial Monitor
-
-```bash
 pio device monitor
 ```
 
----
-
-## ⚠️ Notes
-
-* Ensure correct COM port is selected in `platformio.ini`
-* Default baud rate: `115200`
+**Notes:**
+* Ensure correct COM port is set in `platformio.ini`
+* Default monitor baud: `115200`
 * If upload fails, check USB drivers and permissions
 
 ---
 
-# 🧑‍💻 Author
+## Key Takeaways
 
-**Rudra Patel**
+* UART debug interfaces are frequently left exposed and labeled on consumer hardware
+* Vendor-modified SquashFS filesystems often contain recoverable credentials in `/etc`
+* MD5-crypt hashes (`$1$`) are weak by modern standards and trivially crackable
+* Physical access to a device should be treated as equivalent to full system compromise — firmware encryption and secure boot are the mitigations
+
+---
+
+## Tools Used
+
+| Tool | Purpose |
+|---|---|
+| ESP32-WROOM-32 | UART bridge / baud rate scanner |
+| binwalk | Firmware extraction |
+| John the Ripper | MD5-crypt hash cracking |
+| PlatformIO | ESP32 firmware development |
+
+---
+
+## License
+
+MIT
